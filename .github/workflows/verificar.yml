@@ -1,0 +1,37 @@
+name: Verificar atividade
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rodar o verificador (MySQL 5.7)
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PWD: root
+        run: |
+          ./verificar.sh 2>&1 | tee resultado.txt
+          {
+            echo '## Resultado do verificador'
+            echo
+            grep -E 'NOTA ESTIMADA' -A 2 resultado.txt | tail -1 | tr -d '|' | sed 's/^ */**Nota estimada:** /'
+            echo
+            echo '```'
+            cat resultado.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
